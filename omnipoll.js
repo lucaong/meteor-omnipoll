@@ -1,5 +1,6 @@
 Polls = new Meteor.Collection("polls");
 Options = new Meteor.Collection("options");
+Users = new Meteor.Collection("users");
 
 if(!console) {
   console = {
@@ -8,8 +9,11 @@ if(!console) {
 }
 
 if (Meteor.is_client) {
+  Meteor.subscribe("users");
+
   Meteor.autosubscribe(function() {
-    var selected_poll_id = Session.get("selected_poll_id");
+    var selected_poll_id = Session.get("selected_poll_id"),
+      voters = [];
     if (selected_poll_id) {
       Meteor.subscribe("polls", selected_poll_id);
       Meteor.subscribe("options", selected_poll_id);
@@ -58,7 +62,8 @@ if (Meteor.is_client) {
         id = Options.insert({
           poll_id: this._id,
           text: text,
-          votes: 0
+          votes: 0,
+          voters: []
         });
         $(".new_option_text").val("");
       }
@@ -70,18 +75,56 @@ if (Meteor.is_client) {
     }
   };
 
+  Template.option.voters = function() {
+    return Users.find({uid: {$in: this.voters}}, {sort: {name: 1}});
+  }
+
   Template.option.events = {
     'click': function(evt) {
-      console.log("new vote");
-      if(previously_voted_option_id = amplify.store("vote_"+this.poll_id)) {
-        Options.update({"_id": previously_voted_option_id}, {
-          $inc: {votes: -1}
-        });
-      }
-      Options.update({"_id": this._id}, {
-        $inc: {votes: 1}
-      });
-      amplify.store("vote_"+this.poll_id, this._id);
+      var self = this,
+        identify = function(callback) {
+          FB.getLoginStatus(function(response) {
+            if (response.status === 'connected') {
+              FB.api('/me', function(response) {          
+                callback(response);
+              });
+            } else {
+              // Login with facebook
+              FB.login(function(response) {
+                if (response.authResponse) {
+                  console.log('User logged');
+                  identify(callback);
+                } else {
+                  console.log('User cancelled login or did not fully authorize.');
+                }
+              });
+            }
+          });
+        },
+        vote = function(voter) {
+          var uid = voter["id"],
+              user;
+          Options.update({voters: uid}, {
+            $pull: {voters: uid}, $inc: {votes: -1}
+          });
+          console.log("removed old vote");
+          Options.update({"_id": self._id}, {
+            $push: {voters: uid}, $inc: {votes: 1}
+          });
+          console.log("added new vote");
+          // Create or update user (upsert is not available in this MiniMongo version...)
+          user = Users.findOne({uid: voter["id"]});
+          if (user) {
+            if (user.name !== voter["name"]) {
+              Users.update({uid: voter["id"]}, {name: voter["name"]});
+              console.log("updated user");
+            }
+          } else {
+            Users.insert({uid: voter["id"], name: voter["name"]});
+            console.log("added new user");
+          }
+        } 
+      identify(vote);
     }
   };
 
@@ -108,12 +151,50 @@ if (Meteor.is_client) {
 
   Meteor.startup(function () {
     Backbone.history.start({pushState: true});
+
+    // Load the Facebook SDK Asynchronously
+    (function(d){
+      var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+      if (d.getElementById(id)) {return;}
+      js = d.createElement('script'); js.id = id; js.async = true;
+      js.src = "//connect.facebook.net/en_US/all.js";
+      ref.parentNode.insertBefore(js, ref);
+    }(document));
+
+    // Init the SDK upon load
+    window.fbAsyncInit = function() {
+      FB.init({
+        appId      : '233897373383987', // App ID
+        channelUrl : '//'+window.location.hostname+'/channel.txt', // Path to your Channel File
+        status     : true, // check login status
+        cookie     : true, // enable cookies to allow the server to access the session
+        xfbml      : true  // parse XFBML
+      });
+    };
+
+    Handlebars.registerHelper('to_sentence', function(items, options) {
+      var out = "";
+      items = items.fetch();
+      for(var i=0; i<items.length; i++) {
+        if(i === 0) {
+          out += options.fn(items[i]);
+        } else if (i === items.length - 1) {
+          out += " and " + options.fn(items[i]);
+        } else {
+          out += ", " + options.fn(items[i]);
+        }
+      }
+      return out;
+    });
   });
 }
 
 if (Meteor.is_server) {
   Meteor.publish("polls", function(poll_id) {
     return Polls.find({_id: poll_id});
+  });
+  Meteor.publish("users", function() {
+    return Users.find({});
   });
   Meteor.publish("options", function(poll_id) {
     return Options.find({poll_id: poll_id});

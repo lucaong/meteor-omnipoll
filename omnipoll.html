@@ -60,5 +60,5 @@
 </template>
 
 <template name="option">
-  <li class="option" data-votes="{{votes}}">{{text}} <em class="vote_me">click to vote me!</em></li>
+  <li class="option" data-votes="{{votes}}" title="{{#to_sentence voters}}{{name}}{{/to_sentence}}">{{text}} <em class="vote_me">click to vote me!</em></li>
 </template>
