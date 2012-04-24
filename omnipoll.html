@@ -1,0 +1,64 @@
+<head>
+  <title>OmniPoll</title>
+  <script type="text/javascript" src="/prefixfree.js"></script>
+</head>
+
+<body>
+  <div id="wrap">
+    <div id="header">
+      <h1><a href="/">OmniPoll</a> <small>Collect opinions in minutes</small></h1>
+    </div>
+    <div id="content">
+      {{> omnipoll}}
+    </div>
+    <div id="footer">
+      An experiment with <a href="http://meteor.com">Meteor</a> by <a href="http://www.lucaongaro.eu">Luca Ongaro</a>
+    </div>
+  </div>
+</body>
+
+<template name="omnipoll">
+  <div id="omnipoll">
+    {{#if no_poll_selected}}
+      <div id="new_poll">
+        <p>
+          OmniPoll lets you create polls in an instant. Create one now, no login is needed!
+        </p>
+        <label for="new_poll_text">Create a new poll:</label>
+        <textarea class="new_poll_text" placeholder="Type your new poll question here"></textarea>
+        <div class="new_poll_bottom">
+          <button class="new_poll_button">Create poll</button>
+        </div>
+      </div>
+    {{else}}
+      {{#each selected_polls}}
+        <div id="poll">{{>poll}}</div>
+      {{/each}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="poll">
+  <div class="question">
+    <h2>{{text}}</h2>
+  </div>
+  <ul class="options">
+    {{#each options}}
+      {{> option}}
+    {{/each}}
+  </ul>
+  {{#if no_option}}
+    <span class="option_explanation">add possible answers here</span>
+  {{/if}}
+  <div class="new_option">
+    <input type="text" class="new_option_text" placeholder="Type new possible answer here" />
+    <button class="new_option_button">add</button>
+  </div>
+  <div class="bottom_links">
+    <a class="share_poll_link" href="/">Share this poll</a> or <a class="new_poll_link" href="/">create a new poll</a>
+  </div>
+</template>
+
+<template name="option">
+  <li class="option" data-votes="{{votes}}">{{text}} <em class="vote_me">click to vote me!</em></li>
+</template>
