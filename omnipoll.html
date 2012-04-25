@@ -22,7 +22,7 @@
     {{#if no_poll_selected}}
       <div id="new_poll">
         <p>
-          OmniPoll lets you create polls in an instant. Create one now, no login is needed!
+          OmniPoll lets you create polls in an instant. You can start right now, no frills!
         </p>
         <label for="new_poll_text">Create a new poll:</label>
         <textarea class="new_poll_text" placeholder="Type your new poll question here"></textarea>
@@ -39,7 +39,7 @@
 </template>
 
 <template name="poll">
-  <div class="question">
+  <div class="question" title="Author: {{author}}">
     <h2>{{text}}</h2>
   </div>
   <ul class="options">
@@ -60,5 +60,5 @@
 </template>
 
 <template name="option">
-  <li class="option" data-votes="{{votes}}" title="{{#to_sentence voters}}{{name}}{{/to_sentence}}">{{text}} <em class="vote_me">click to vote me!</em></li>
+  <li class="option" data-votes="{{votes}}" title="Voted by: {{#to_sentence voters}}{{name}}{{/to_sentence}}">{{text}} <em class="vote_me">click to vote me!</em></li>
 </template>

@@ -1,6 +1,7 @@
-Polls = new Meteor.Collection("polls");
-Options = new Meteor.Collection("options");
-Users = new Meteor.Collection("users");
+var Polls = new Meteor.Collection("polls"),
+    Options = new Meteor.Collection("options"),
+    Users = new Meteor.Collection("users"),
+    OmniPoll = {};
 
 if(!console) {
   console = {
@@ -30,22 +31,31 @@ if (Meteor.is_client) {
   Template.omnipoll.events = {
     'keyup .new_poll_text, click .new_poll_button': function(evt) {
       var code = (evt.keyCode ? evt.keyCode : evt.which),
-        text, id;
-      text = $(".new_poll_text").val();
+          text = $(".new_poll_text").val(),
+          createPoll = function(author){
+            var id;
+            id = Polls.insert({
+              text: text,
+              options: [],
+              author: author["id"]
+            });
+            console.log("New poll created: "+text);
+            Template.omnipoll.selected_polls = Polls.find({"_id": id});
+            Router.setPoll(id);
+          };
       if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
-        console.log("New poll: "+text);
-        id = Polls.insert({
-          text: text,
-          options: []
-        });
-        Template.omnipoll.selected_polls = Polls.find({"_id": id});
-        Router.setPoll(id);
+        OmniPoll.identifyUser(createPoll);
       }
     }
   };
 
   Template.poll.options = function() {
     return Options.find({poll_id: this._id}, {sort: {votes: -1, text: 1}});
+  };
+
+  Template.poll.author = function() {
+    var author = Users.findOne({uid: this.author});
+    return author ? author.name : "anonymous";
   };
 
   Template.poll.no_option = function() {
@@ -82,25 +92,6 @@ if (Meteor.is_client) {
   Template.option.events = {
     'click': function(evt) {
       var self = this,
-        identify = function(callback) {
-          FB.getLoginStatus(function(response) {
-            if (response.status === 'connected') {
-              FB.api('/me', function(response) {          
-                callback(response);
-              });
-            } else {
-              // Login with facebook
-              FB.login(function(response) {
-                if (response.authResponse) {
-                  console.log('User logged');
-                  identify(callback);
-                } else {
-                  console.log('User cancelled login or did not fully authorize.');
-                }
-              });
-            }
-          });
-        },
         vote = function(voter) {
           var uid = voter["id"],
               user;
@@ -123,8 +114,8 @@ if (Meteor.is_client) {
             Users.insert({uid: voter["id"], name: voter["name"]});
             console.log("added new user");
           }
-        } 
-      identify(vote);
+        };
+      OmniPoll.identifyUser(vote);
     }
   };
 
@@ -171,6 +162,26 @@ if (Meteor.is_client) {
         xfbml      : true  // parse XFBML
       });
     };
+
+    OmniPoll.identifyUser = function(callback) {
+      FB.getLoginStatus(function(response) {
+        if (response.status === 'connected') {
+          FB.api('/me', function(response) {          
+            callback(response);
+          });
+        } else {
+          // Login with facebook
+          FB.login(function(response) {
+            if (response.authResponse) {
+              console.log('User identified: '+response["id"]+" - "+response["name"]);
+              OmniPoll.identifyUser(callback);
+            } else {
+              console.log('User cancelled login or did not fully authorize.');
+            }
+          });
+        }
+      });
+    }
 
     Handlebars.registerHelper('to_sentence', function(items, options) {
       var out = "";
