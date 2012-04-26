@@ -14,7 +14,7 @@ Template.omnipoll.events = {
         createPollForAuthor = function(author) {
           Meteor.call('createPoll', {author: author["id"], text: text}, function(error, id) {
             Template.omnipoll.selected_polls = Polls.find({"_id": id});
-            Router.setPoll(id);
+            OmniPoll.router.setPoll(id);
           });
         };
     if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
