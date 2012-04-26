@@ -1,6 +1,8 @@
 <head>
   <title>OmniPoll</title>
-  <script type="text/javascript" src="/prefixfree.js"></script>
+  <script type="text/javascript" src="/javascripts/prefixfree.js"></script>
+  <link rel="stylesheet" type="text/css" href="/jquery-ui/css/custom-theme/jquery-ui-1.8.19.custom.css" />
+  <script type="text/javascript" src="/jquery-ui/js/jquery-ui-1.8.19.custom.min.js"></script>
 </head>
 
 <body>
@@ -57,8 +59,19 @@
   <div class="bottom_links">
     <a class="share_poll_link" href="/">Share this poll</a> or <a class="new_poll_link" href="/">create a new poll</a>
   </div>
+  <div id="share-dialog" title="Share a link to this poll:" style="display:none">
+    <p>
+      <label for="poll_url">URL:</label>
+      <br>
+      <input type="text" id="poll_url" />
+    </p>
+  </div>
 </template>
 
 <template name="option">
-  <li class="option" data-votes="{{votes}}" title="Voted by: {{#if votes}}{{#to_sentence voters}}{{name}}{{/to_sentence}}{{else}}no one yet{{/if}}.">{{text}} <em class="vote_me">click to vote me!</em></li>
+  <li class="option" id="option_{{_id}}" data-tooltip="Voted by: {{#if votes}}{{#to_sentence voters}}{{name}}{{/to_sentence}}{{else}}no one yet{{/if}}">
+    <span class="votes">{{votes}} {{#if votes_are 1 }}vote{{else}}votes{{/if}}</span>
+    <span class="text">{{text}}</span>
+    <em class="vote_me">click to vote me!</em>
+  </li>
 </template>

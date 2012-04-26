@@ -12,7 +12,12 @@ body {
 
 h1, h2 {
 	color: #333;
+}
+h1 {
 	margin: 5px 0 15px 0;
+}
+h2 {
+	margin: 0 0 10px 0;
 }
 
 a {
@@ -76,7 +81,7 @@ p {
 	color: #000;
 }
 
-#omnipoll button {
+#omnipoll button, .ui-dialog button {
 	font-size: 14px;
     font-family: sans-serif;
     font-weight: bold;
@@ -104,7 +109,7 @@ p {
 	width: auto;
 }
 
-#new_poll textarea, #poll input {
+#new_poll textarea, #poll input, .ui-dialog input {
 	padding: 5px;
 	border-radius: 3px;
 	border: 1px solid #999;
@@ -124,12 +129,19 @@ p {
 	margin: 10px 0 0 0;
 	width: 550px;
 }
+.ui-dialog input {
+	width: 90%;
+}
 #poll .bottom_links {
 	text-align: right;
 	font-size: 12px;
 	width: auto;
 	padding: 0;
 	margin: 10px 0 0 0;
+}
+
+#poll .question:first-letter {
+	text-transform: uppercase;
 }
 
 .option_explanation {
@@ -158,10 +170,12 @@ ul.options {
 }
 
 li.option {
+	position: relative;
 	list-style: none;
-	padding: 3px 5px;
+	padding: 4px 5px 4px 10px;
 	margin: 0;
 	color: #333;
+	border-radius: 3px;
 }
 li.option:hover {
 	background: #eeeff0;
@@ -170,20 +184,39 @@ li.option:hover {
 
 li.option .vote_me {
 	display: none;
-	color: #009900;
+	color: #09f;
 	margin-left: 10px;
 	font-size: 0.8em;
 	float: right;
-	padding: 0 10px;
+	padding: 2px 3px 0 0;
 }
 li.option:hover .vote_me {
 	display: inline-block;
 }
 
 li.option::before {
-	margin-right: 10px;
-	width: 50px;
-	content: attr(data-votes) " votes:";
+	display: none;
+	width: 150px;
+	position: absolute;
+	left: -170px;
+	top: 0;
+	content: attr(data-tooltip);
+	font-size: 12px;
+	background: #fff;
+	padding: 5px 7px;
+	border-radius: 3px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), inset 0 -5px 7px rgba(0, 0, 0, 0.1);
+}
+li.option:hover::before {
+	display: block;
+	background: rgba(255, 255, 255, 0.9);
+	width: 150px;
+}
+
+li.option .votes {
 	font-weight: bold;
 	color: #555;
+	padding-right: 2px;
+	margin-left: -5px;
 }

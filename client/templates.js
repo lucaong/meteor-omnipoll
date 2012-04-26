@@ -54,7 +54,43 @@ Template.poll.events = {
   },
 
   'click .share_poll_link': function(evt) {
-    prompt("Copy and share this URL:", window.location.href);
+    var self = this,
+        pollURL = window.location.href,
+        fb_share_object = {
+          name: 'OmniPoll - ' + self.text,
+          link: pollURL,
+          caption: 'OmniPoll - Collect opinion in minutes.',
+          description: ''
+        };
+    $("#share-dialog").find("input[type=text]").val(pollURL).end().dialog({
+      show: {effect: 'fade'},
+      minWidth: 500,
+      open: function() { $("input#poll_url").select(); },
+      buttons: {
+        "Send link in Facebook message": function(){
+          $(this).dialog("close");
+          fb_share_object.method = 'send';
+          FB.ui(fb_share_object, function(response) {
+            if (response && response.post_id) {
+              console.log('Poll was sent with facebook message.');
+            } else {
+              console.log('Poll was not sent with facebook message.');
+            }
+          });
+        },
+        "Post link on Facebook wall": function(){
+          $(this).dialog("close");
+          fb_share_object.method = 'feed';
+          FB.ui(fb_share_object, function(response) {
+            if (response && response.post_id) {
+              console.log('Poll was published on facebook wall.');
+            } else {
+              console.log('Poll was not published on facebook wall.');
+            }
+          });
+        }
+      }
+    });
     evt.preventDefault();
   }
 };
@@ -66,6 +102,10 @@ Template.option.voters = function() {
   return Users.find({uid: {$in: this.voters}}, {sort: {name: 1}});
 }
 
+Template.option.votes_are = function(n) {
+  return Options.findOne({_id: this._id}).votes === n;
+}
+
 Template.option.events = {
   'click': function(evt) {
     var self = this,
@@ -74,6 +114,7 @@ Template.option.events = {
         Meteor.call("vote", self._id, voter_uid, function(error, result) {
           // Create or update user (upsert is not available in this MiniMongo version...)
           var user = Users.findOne({uid: voter_uid});
+          $("#option_"+self._id).effect("highlight", {duration: 1000});
           if (user) {
             if (user.name !== voter.name) {
               Meteor.call("updateUser", user._id, {name: voter.name})
@@ -81,7 +122,7 @@ Template.option.events = {
           } else {
             Meteor.call("createUser", {uid: voter_uid, name: voter.name});
           }
-          });
+        });
       };
     OmniPoll.identifyUser(vote);
   }
