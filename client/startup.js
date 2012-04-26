@@ -13,7 +13,7 @@ Meteor.startup(function () {
   // Init the Facebook SDK upon load
   window.fbAsyncInit = function() {
     FB.init({
-      appId      : '233897373383987', // App ID
+      appId      : FACEBOOK_APP_ID, // App ID
       channelUrl : '//'+window.location.hostname+'/channel.txt', // Path to your Channel File
       status     : true, // check login status
       cookie     : true, // enable cookies to allow the server to access the session
