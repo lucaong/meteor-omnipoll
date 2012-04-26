@@ -57,7 +57,7 @@ Template.poll.events = {
     var self = this,
         pollURL = window.location.href,
         fb_share_object = {
-          name: 'OmniPoll - ' + self.text,
+          name: 'Poll: ' + self.text,
           link: pollURL,
           caption: 'OmniPoll - Collect opinion in minutes.',
           description: ''
