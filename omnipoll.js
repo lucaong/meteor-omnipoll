@@ -3,13 +3,13 @@ var Polls = new Meteor.Collection("polls"),
     Users = new Meteor.Collection("users"),
     OmniPoll = {};
 
-if(!window.console) {
-  window.console = {
-    log: function(){}
-  }
-}
-
 if (Meteor.is_client) {
+  if(window && !window.console) {
+    window.console = {
+      log: function(){}
+    }
+  }
+
   Meteor.subscribe("users");
 
   Meteor.autosubscribe(function() {
@@ -32,19 +32,14 @@ if (Meteor.is_client) {
     'keyup .new_poll_text, click .new_poll_button': function(evt) {
       var code = (evt.keyCode ? evt.keyCode : evt.which),
           text = $(".new_poll_text").val(),
-          createPoll = function(author){
-            var id;
-            id = Polls.insert({
-              text: text,
-              options: [],
-              author: author["id"]
+          createPollForAuthor = function(author) {
+            Meteor.call('createPoll', {author: author["id"], text: text}, function(error, id) {
+              Template.omnipoll.selected_polls = Polls.find({"_id": id});
+              Router.setPoll(id);
             });
-            console.log("New poll created: "+text);
-            Template.omnipoll.selected_polls = Polls.find({"_id": id});
-            Router.setPoll(id);
           };
       if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
-        OmniPoll.identifyUser(createPoll);
+        OmniPoll.identifyUser(createPollForAuthor);
       }
     }
   };
@@ -65,17 +60,14 @@ if (Meteor.is_client) {
   Template.poll.events = {
     'keyup .new_option_text, click .new_option_button': function(evt) {
       var code = (evt.keyCode ? evt.keyCode : evt.which),
-        text = $(".new_option_text").val(),
-        id;
+        text = $(".new_option_text").val();
       if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
-        console.log("new option: "+text);
-        id = Options.insert({
+        Meteor.call('createOption', {
           poll_id: this._id,
-          text: text,
-          votes: 0,
-          voters: []
+          text: text
+        }, function(error, id) {
+          $(".new_option_text").val("");
         });
-        $(".new_option_text").val("");
       }
     },
 
@@ -93,27 +85,18 @@ if (Meteor.is_client) {
     'click': function(evt) {
       var self = this,
         vote = function(voter) {
-          var uid = voter["id"],
-              user;
-          Options.update({voters: uid}, {
-            $pull: {voters: uid}, $inc: {votes: -1}
-          });
-          console.log("removed old vote");
-          Options.update({"_id": self._id}, {
-            $push: {voters: uid}, $inc: {votes: 1}
-          });
-          console.log("added new vote");
-          // Create or update user (upsert is not available in this MiniMongo version...)
-          user = Users.findOne({uid: voter["id"]});
-          if (user) {
-            if (user.name !== voter["name"]) {
-              Users.update({uid: voter["id"]}, {name: voter["name"]});
-              console.log("updated user");
+          var voter_uid = voter["id"];
+          Meteor.call("vote", self._id, voter_uid, function(error, result) {
+            // Create or update user (upsert is not available in this MiniMongo version...)
+            var user = Users.findOne({uid: voter_uid});
+            if (user) {
+              if (user.name !== voter.name) {
+                Meteor.call("updateUser", user._id, {name: voter.name})
+              }
+            } else {
+              Meteor.call("createUser", {uid: voter_uid, name: voter.name});
             }
-          } else {
-            Users.insert({uid: voter["id"], name: voter["name"]});
-            console.log("added new user");
-          }
+            });
         };
       OmniPoll.identifyUser(vote);
     }
@@ -166,14 +149,15 @@ if (Meteor.is_client) {
     OmniPoll.identifyUser = function(callback) {
       FB.getLoginStatus(function(response) {
         if (response.status === 'connected') {
-          FB.api('/me', function(response) {          
+          FB.api('/me', function(response) {
+            console.log('User identified: '+response["id"]+" - "+response["name"]);          
             callback(response);
           });
         } else {
           // Login with facebook
           FB.login(function(response) {
             if (response.authResponse) {
-              console.log('User identified: '+response["id"]+" - "+response["name"]);
+              console.log('User logged');
               OmniPoll.identifyUser(callback);
             } else {
               console.log('User cancelled login or did not fully authorize.');
@@ -212,6 +196,48 @@ if (Meteor.is_server) {
   });
 
   Meteor.startup(function () {
-    //
+    // Disable direct client-side access to insert, update and remove on collections
+    _.each(['polls', 'options', 'users'], function(collection) {
+      _.each(['insert', 'update', 'remove'], function(method) {
+        Meteor.default_server.method_handlers['/' + collection + '/' + method] = function() {};
+      });
+    });
   });
 }
+
+Meteor.methods({
+  createPoll: function(poll_attrs) {
+    poll_attrs = _.extend(_.pick(poll_attrs, 'author', 'text'), {options: []});
+    var id = Polls.insert(poll_attrs);
+    console.log("New poll created: " + id);
+    return id;
+  },
+  createOption: function(option_attrs) {
+    option_attrs = _.extend(_.pick(option_attrs, 'poll_id', 'text'), {votes: 0, voters: []});
+    var id = Options.insert(option_attrs);
+    console.log("New option created: " + id);
+    return id;
+  },
+  createUser: function(user_attrs) {
+    var id = Users.insert(_.pick(user_attrs, 'uid', 'name'));
+    console.log("Added new user: " + id);
+    return id;
+  },
+  updateUser: function(user_id, user_attrs) {
+    var id = Users.update({_id: user_id}, _.pick(user_attrs, 'name'));
+    console.log("Updated user: " + id);
+    return id;
+  },
+  vote: function(option_id, voter_uid) {
+    console.log(option_id+" vote "+voter_uid)
+    Options.update({voters: voter_uid}, {
+      $pull: {voters: voter_uid}, $inc: {votes: -1}
+    });
+    console.log("Removed old vote, if existing");
+    Options.update({"_id": option_id}, {
+      $push: {voters: voter_uid}, $inc: {votes: 1}
+    });
+    console.log("Added new vote for uid " + voter_uid);
+    return true;
+  }
+});
