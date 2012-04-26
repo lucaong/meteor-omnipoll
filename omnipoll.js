@@ -3,8 +3,8 @@ var Polls = new Meteor.Collection("polls"),
     Users = new Meteor.Collection("users"),
     OmniPoll = {};
 
-if(!console) {
-  console = {
+if(!window.console) {
+  window.console = {
     log: function(){}
   }
 }
