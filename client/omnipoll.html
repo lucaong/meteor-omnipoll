@@ -69,8 +69,8 @@
 </template>
 
 <template name="option">
-  <li class="option" id="option_{{_id}}" data-tooltip="Voted by: {{#if votes}}{{#to_sentence voters}}{{name}}{{/to_sentence}}{{else}}no one yet{{/if}}">
-    <span class="votes">{{votes}} {{#if votes_are 1 }}vote{{else}}votes{{/if}}</span>
+  <li class="option" id="option_{{_id}}" data-tooltip="{{#if votes}}Voted by: {{voters_to_sentence}}{{else}}No votes yet{{/if}}">
+    <span class="votes">{{votes}} {{#if one_vote }}vote{{else}}votes{{/if}}</span>
     <span class="text">{{text}}</span>
     <em class="vote_me">click to vote me!</em>
   </li>

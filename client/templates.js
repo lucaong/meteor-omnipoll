@@ -98,12 +98,23 @@ Template.poll.events = {
 
 // Template.option
 
-Template.option.voters = function() {
-  return Users.find({uid: {$in: this.voters}}, {sort: {name: 1}});
+Template.option.voters_to_sentence = function() {
+  var voters = Users.find({uid: {$in: this.voters}}, {sort: {name: 1}}).fetch(),
+      out = "";
+  for(var i=0; i<voters.length; i++) {
+    if(i === 0) {
+      out += voters[i].name;
+    } else if (i === voters.length - 1) {
+      out += " and " + voters[i].name;
+    } else {
+      out += ", " + voters[i].name;
+    }
+  }
+  return out;
 }
 
-Template.option.votes_are = function(n) {
-  return Options.findOne({_id: this._id}).votes === n;
+Template.option.one_vote = function() {
+  return Options.findOne({_id: this._id}).votes === 1;
 }
 
 Template.option.events = {
@@ -128,20 +139,3 @@ Template.option.events = {
   }
 };
 
-
-// Handlebar helpers
-
-Handlebars.registerHelper('to_sentence', function(items, options) {
-  var out = "";
-  items = items.fetch();
-  for(var i=0; i<items.length; i++) {
-    if(i === 0) {
-      out += options.fn(items[i]);
-    } else if (i === items.length - 1) {
-      out += " and " + options.fn(items[i]);
-    } else {
-      out += ", " + options.fn(items[i]);
-    }
-  }
-  return out;
-});
