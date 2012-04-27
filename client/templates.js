@@ -42,7 +42,7 @@ Template.poll.no_option = function() {
 Template.poll.events = {
   'keyup .new_option_text, click .new_option_button': function(evt) {
     var code = (evt.keyCode ? evt.keyCode : evt.which),
-      text = $(".new_option_text").val();
+        text = $(".new_option_text").val();
     if(text && $.trim(text).length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
       Meteor.call('createOption', {
         poll_id: this._id,
