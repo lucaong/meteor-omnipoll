@@ -23,7 +23,11 @@ Meteor.methods({
   },
   vote: function(option_id, voter_uid) {
     console.log(option_id+" vote "+voter_uid)
-    Options.update({voters: voter_uid}, {
+    var option = Options.findOne({_id: option_id});
+    if (!option) {
+      throw "No option found with id " + option_id;
+    }
+    Options.update({poll_id: option.poll_id, voters: voter_uid}, {
       $pull: {voters: voter_uid}, $inc: {votes: -1}
     });
     console.log("Removed old vote, if existing");
