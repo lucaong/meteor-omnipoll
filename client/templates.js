@@ -10,15 +10,15 @@ Template.omnipoll.no_poll_selected = function() {
 Template.omnipoll.events = {
   'keyup .new_poll_text, click .new_poll_button': function(evt) {
     var code = (evt.keyCode ? evt.keyCode : evt.which),
-        text = $(".new_poll_text").val(),
-        createPollForAuthor = function(author) {
-          Meteor.call('createPoll', {author: author["id"], text: text}, function(error, id) {
-            Template.omnipoll.selected_polls = Polls.find({"_id": id});
-            OmniPoll.router.setPoll(id);
-          });
-        };
-    if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
-      OmniPoll.identifyUser(createPollForAuthor);
+        text = $(".new_poll_text").val();
+    if(text && $.trim(text).length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
+      $(".new_poll_text").attr("disabled", "disabled");
+      OmniPoll.getAccessTokenAndCall(function(access_token) {
+        Meteor.call('createPoll', text, access_token, function(error, id) {
+          Template.omnipoll.selected_polls = Polls.find({"_id": id});
+          OmniPoll.router.setPoll(id);
+        });
+      });
     }
   }
 };
@@ -43,7 +43,7 @@ Template.poll.events = {
   'keyup .new_option_text, click .new_option_button': function(evt) {
     var code = (evt.keyCode ? evt.keyCode : evt.which),
       text = $(".new_option_text").val();
-    if(text && text.length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
+    if(text && $.trim(text).length > 0 && (evt.type === 'click' || evt.keyCode === 13 || evt.which === 13)) {
       Meteor.call('createOption', {
         poll_id: this._id,
         text: text
@@ -56,7 +56,7 @@ Template.poll.events = {
   'click .share_poll_link': function(evt) {
     var self = this,
         pollURL = window.location.href,
-        fb_share_object = {
+        to_share = {
           name: 'Poll: ' + self.text,
           link: pollURL,
           caption: 'OmniPoll - Collect opinion in minutes.',
@@ -69,25 +69,11 @@ Template.poll.events = {
       buttons: {
         "Send link in Facebook message": function(){
           $(this).dialog("close");
-          fb_share_object.method = 'send';
-          FB.ui(fb_share_object, function(response) {
-            if (response && response.post_id) {
-              console.log('Poll was sent with facebook message.');
-            } else {
-              console.log('Poll was not sent with facebook message.');
-            }
-          });
+          OmniPoll.facebookShareDialog(to_share, "send");
         },
         "Post link on Facebook wall": function(){
           $(this).dialog("close");
-          fb_share_object.method = 'feed';
-          FB.ui(fb_share_object, function(response) {
-            if (response && response.post_id) {
-              console.log('Poll was published on facebook wall.');
-            } else {
-              console.log('Poll was not published on facebook wall.');
-            }
-          });
+          OmniPoll.facebookShareDialog(to_share, "feed");
         }
       }
     });
@@ -119,23 +105,14 @@ Template.option.one_vote = function() {
 
 Template.option.events = {
   'click': function(evt) {
-    var self = this,
-      vote = function(voter) {
-        var voter_uid = voter["id"];
-        Meteor.call("vote", self._id, voter_uid, function(error, result) {
-          // Create or update user (upsert is not available in this MiniMongo version...)
-          var user = Users.findOne({uid: voter_uid});
+    var self = this;
+    OmniPoll.getAccessTokenAndCall(function(voter_access_token) {
+      Meteor.call("vote", self._id, voter_access_token, function(error, voter) {
+        if(!error) {
           $("#option_"+self._id).effect("highlight", {duration: 1000});
-          if (user) {
-            if (user.name !== voter.name) {
-              Meteor.call("updateUser", user._id, {name: voter.name})
-            }
-          } else {
-            Meteor.call("createUser", {uid: voter_uid, name: voter.name});
-          }
-        });
-      };
-    OmniPoll.identifyUser(vote);
+        }
+      });
+    });
   }
 };
 
